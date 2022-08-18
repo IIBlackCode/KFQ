@@ -1,0 +1,541 @@
+from django.http.response import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from .models import *
+from django.core.paginator import Paginator
+from datetime import date
+import bcrypt
+from config.settings import SECRET_KEY
+from django.views.decorators.csrf import csrf_exempt
+import smtplib
+from email.mime.text import MIMEText
+import random
+import string
+import re
+
+# Create your views here.
+def page_404(request):
+    return render(request, 'app/404.html')
+
+def blog_single(request):
+    return render(request, 'app/blog_single.html')
+
+def email_valid(email):
+    # 정규식 검사기
+    email_test = re.compile('^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+    if not email_test.match(email):
+        return False
+    return True
+
+def email_duplicate(email):
+    #데이터 베이스 조회
+    print("email_duplicate 확인 이메일 : " + email)
+    users = User.objects.all()
+    for user in users:
+        print(user.email)
+        if user.email == email:
+            print("exists")
+            return False
+    return True
+
+@csrf_exempt
+def find_password(request):
+    if request.method == 'POST':
+        print("find_password POST")
+        email = request.POST.get('email')
+        print(email)
+
+        # 중복된 이메일이 있어야 성공(이메일이 존재한다는 뜻)
+        if email_valid(email) and (email_duplicate(email)):
+            print("일치하는 회원이 없음")
+            return JsonResponse({'result': 'no', 'message': '일치하는 회원이 없습니다.'})
+
+        # 임시 비밀번호 생성
+        char_set = string.ascii_lowercase + string.digits
+        temp_password = ''.join(random.sample(char_set*6, 6))
+        msg = f'임시 비밀번호는 [{temp_password}]입니다.\n해당 비밀번호로 로그인해주세요.'
+        print(msg)
+
+        # 임시 비밀번호 암호화
+        password = temp_password.encode('utf-8')                 # 입력된 패스워드를 바이트 형태로 인코딩
+        password_crypt = bcrypt.hashpw(password, bcrypt.gensalt())  # 암호화된 비밀번호 생성
+        password_crypt = password_crypt.decode('utf-8')             # DB에 저장할 수 있는 유니코드 문자열 형태로 디코딩
+
+        # 해당 메일 계정의 비밀번호를 임시 비밀번호로 변경
+        user = User.objects.get(email=email)
+        user.password = password_crypt
+
+        # DB에 저장
+        user.save()
+
+        # 발신자주소, 수신자주소, 메시지
+        send_mail('rladbwjd1023@gmail.com', email, msg)
+        return JsonResponse({'result': 'ok', 'message': '임시 비밀번호를 해당 메일로 발송하였습니다.'})
+        # return render(request, 'app/login.html')
+    else:
+        print("find_password GET")
+        return render(request, 'app/findpass.html', {})
+
+def send_mail(from_email, to_email, msg):
+    smtp = smtplib.SMTP_SSL('smtp.gmail.com', 465) # SMTP 설정
+    smtp.login(from_email, 'tpjimdlikzbppdnv') # 인증정보 설정
+    msg = MIMEText(msg)
+    msg['Subject'] = '[booze-on 임시 비밀번호 발송] ' + to_email # 제목
+    msg['To'] = from_email # 수신 이메일
+    smtp.sendmail(from_email, to_email, msg.as_string())
+    smtp.quit()
+
+#리뷰 모음 페이지
+def blog(request):
+    # 카테고리 필터
+    category = request.GET.get('category')
+    keyword = request.GET.get('keyword')
+
+    if not keyword:
+        keyword = ""
+
+    if category in ['beer', 'wine', 'cocktail']:
+        p_comments = Product_Comment.objects \
+            .filter(product__category__name=category) \
+            .filter(content__icontains = keyword)
+    else:
+        p_comments = Product_Comment.objects \
+            .filter(content__icontains = keyword)
+
+
+    page = request.GET.get('page')
+    if not page:
+        page = '1'
+
+    p = Paginator(p_comments, 10)
+
+    pp_c = p.page(page)
+
+    start_page = (int(page) - 1) // 10 * 10 + 1
+    end_page = start_page + 9
+
+    if end_page > p.num_pages:
+        end_page = p.num_pages
+
+    context = {
+        'pp_c': pp_c,
+        'pagination': range(start_page, end_page + 1),
+        'p_comments': p_comments,
+        'category': category,
+        'keyword': keyword,
+        'page': page,
+    }
+    # return render(request, 'app/blog.html', { 'p_comments': p_comments, 'category': category })
+    return render(request, 'app/blog.html', context)
+
+def contact(request):
+    return render(request, 'app/contact.html')
+
+
+def icons(request):
+    return render(request, 'app/icons.html')
+
+
+def index(request):
+    products = Product.objects.all()
+    comments = Product_Comment.objects.all()
+    beer_num, wine_num, cock_num, review_num = 0, 0, 0, 0
+
+    for product in products:
+        if product.category_id == 1:
+            beer_num += 1
+        elif product.category_id == 2:
+            wine_num += 1
+        else:
+            cock_num += 1
+
+    for _ in comments:
+        review_num += 1
+    # randoms : 제품 슬라이드 칸에 들어갈 사진 9장 추출용
+    randoms = Product_Comment.objects.select_related('product').order_by('?')[:9]
+    context = {'beer_num':beer_num, 'wine_num':wine_num, 'cock_num':cock_num, 'review_num':review_num, 'prodects':products, 'comments':comments, 'randoms':randoms}
+
+    return render(request, 'app/index.html', context)
+
+# 추천 페이지에 맥주 데이터 가져오기 (16개)
+def recommand(request):
+    category = request.GET.get('category')
+    if (category == None) or (category == '0'):
+        products = Product.objects.order_by('?')[:16]
+    else:
+        products = Product.objects.filter(category_id = category).order_by('?')[:16]
+    request.session['category'] = str(category)
+    return render(request, 'app/recommand.html', {
+        'products': products
+    })
+
+# 추천 페이지 결과를 이용 -> 머신러닝(클러스터링) -> 결과값과 동일한 군집의 제품 데이터 가져오기 (16개)
+def recommand_result(request):
+    # 머신러닝 나온 군집 안의 제품으로 줘야 함
+    cluster = int(request.session.get('cluster'))
+    selected_category = int(request.GET.get('category'))
+    # selected_category = int(request.session.get('category'))
+    # selected_category = localStorage.getItem("category")
+
+    if selected_category == 0:
+        products = Product.objects.filter(kmeans=cluster).order_by('?')[:16]
+    else:
+        products = Product.objects.filter(kmeans=cluster, category=selected_category).order_by('?')[:16]
+
+    for product in products:
+        print(product.kmeans)
+
+    return render(request, 'app/recommand_result.html', {
+        'products': products, 'cluster':cluster
+    })
+
+def register(request):
+    return render(request, 'app/register.html')
+
+def product_single(request):
+    try:
+        product_id = request.GET.get('p_id')
+
+        if request.method == 'GET':
+            product = Product.objects.get(id=product_id)
+            product_comment_list = Product_Comment.objects.filter(product_id=product_id).select_related('user').order_by('-id')
+
+            p_name = product.name
+            p_image = product.image
+            p_alcohol = product.alcohol
+            p_category_id = product.category_id
+
+            dict = {'bold': 0, 'sparkling': 0,'sweet': 0,'tannic': 0,'acidic': 0,'bold': 0, 'score': 0}
+            for p in product_comment_list:
+                dict['bold'] += p.bold
+                dict['sparkling'] += p.sparkling
+                dict['sweet'] += p.sweet
+                dict['tannic'] += p.tannic
+                dict['acidic'] += p.acidic
+                dict['score'] += p.score
+
+            dict['bold'] = round((dict['bold'] / len(product_comment_list)) * 100)
+            dict['sparkling'] = round((dict['sparkling'] / len(product_comment_list)) * 100)
+            dict['sweet'] = round((dict['sweet'] / len(product_comment_list))  * 100)
+            dict['tannic'] = round((dict['tannic'] / len(product_comment_list))  * 100)
+            dict['acidic'] = round((dict['acidic'] / len(product_comment_list))  * 100)
+            dict['score'] = (dict['score'] / len(product_comment_list)) * 20 # 5점만점을 퍼센트로 변환
+
+            return render(request, 'app/product_single.html', {
+                'name': p_name,
+                'image': p_image,
+                'alcohol': p_alcohol,
+                'category_id': p_category_id,
+                'taste': dict,
+                'product_id': product_id,
+                'product_comment_list': product_comment_list,
+            })
+
+        elif request.method == 'POST':
+            if not request.session.get('email'):
+                return JsonResponse({
+                    'result': 'Fail',
+                    'message': 'session out',
+                })
+            user_id = User.objects.get(email=request.session.get('email')).id
+            score = request.POST.get('score')
+            content = request.POST.get('content')
+            bold = int(request.POST.get('bold')) / 100
+            sparkling = int(request.POST.get('sparkling')) / 100
+            sweet = int(request.POST.get('sweet')) / 100
+            tannic = int(request.POST.get('tannic')) / 100
+            acidic = int(request.POST.get('acidic')) / 100
+
+            Product_Comment(
+                user_id = user_id,
+                product_id = product_id,
+                score = score,
+                content = content,
+                bold = bold,
+                sparkling = sparkling,
+                sweet = sweet,
+                tannic = tannic,
+                acidic = acidic,
+                time = date.today()
+            ).save()
+
+            return JsonResponse({
+                'result': 'Success',
+                'message': 'ok'
+            })
+        else:
+            print('else')
+            return JsonResponse({
+                'result': 'Fail',
+                'message': 'go back',
+            })
+
+    except Exception as e:
+        return JsonResponse({
+                'result': 'Fail',
+                'message': 'go back',
+            })
+
+def product(request):
+    category = request.GET.get('category')
+    keyword = request.GET.get('keyword')
+
+    products = Product.objects.none()
+    if category:
+        category_id = Category.objects.get(name=category)
+        products = Product.objects.filter(category_id=category_id)
+    else:
+        category = ""
+        products = Product.objects.all()
+
+    if keyword:
+        products = products.filter(name__icontains=keyword)
+    else:
+        keyword = ""
+
+    page = request.GET.get('page')
+
+    if not page:
+        page = '1'
+
+    p = Paginator(products, 9)
+
+    p_c = p.page(page)
+
+    start_page = (int(page) - 1) // 10 * 10 + 1
+    end_page = start_page + 9
+
+    if end_page > p.num_pages:
+        end_page = p.num_pages
+
+
+    return render(
+        request, 'app/product.html', {
+            'p_c': p_c,
+            'pagination': range(start_page, end_page + 1),
+            'product_list': products,
+            'category': category,
+            'keyword': keyword
+        })
+
+def profile(request):
+    if request.method == 'GET':
+        # 현재 로그인한 user 정보를 DB에서 가져옴
+        try:
+            print("profile 'GET'")
+            email = request.session.get('email')
+            user = User.objects.get(email=email)
+
+            nickname = user.alias
+            password = user.password
+            print(nickname, password)
+
+            return render(request, 'app/profile_form.html', {
+                'nickname': nickname,
+                'password': password,
+            })
+        except:
+            return render(request, 'app/login.html', {})
+    else:
+        print("request: " + str(request))
+        nickname = request.POST['nickname']
+        print(nickname)
+
+        try:
+            email = request.session.get('email')
+            print(email)
+            user = User.objects.get(email=email)
+
+            # 비밀번호 중복 체크
+            pw1 = request.POST.get('password')
+            pw2 = request.POST.get('password2')
+            print(pw1, pw2)
+
+            if pw1 != pw2:
+                print("not matched")
+                return JsonResponse({'result' : 'Fail', 'messages': 'Password is not match.'})
+
+            else:
+                print("matched")
+                # db에 저장
+                user.alias = nickname
+                password = pw1.encode('utf-8')                 # 입력된 패스워드를 바이트 형태로 인코딩
+                password_crypt = bcrypt.hashpw(password, bcrypt.gensalt())  # 암호화된 비밀번호 생성
+                password_crypt = password_crypt.decode('utf-8')   
+                user.password = password_crypt
+                user.save()
+
+                # session에 재저장
+                request.session['alias'] = nickname
+
+                return JsonResponse({'result' : 'Success', 'messages': 'Profile change succeeded.'})
+
+        except:
+            messages = "Profile change failed."
+            return render(request, 'app/login.html', {'result': 'Fail', 'messages' : messages})
+
+def to_members_form(request):
+    return render(request, 'app/to_members.html')
+
+def userpage(request):
+    email = request.GET.get('email')
+    user = User.objects.get(email=email)
+    user_comments = Product_Comment.objects.filter(user_id=user.id).select_related()
+   
+    #키워드 검색부
+    keyword = request.GET.get('keyword')
+    if not keyword:
+        keyword = ""
+    else:
+        user_comments = Product_Comment.objects\
+            .filter(user_id=user.id)\
+            .filter(content__icontains = keyword)
+
+    user_comments = user_comments.select_related().order_by('-time')   
+    
+    review_num = 0
+
+    for _ in user_comments:
+        review_num += 1
+
+    page = request.GET.get('page')
+
+    if not page:
+        page = '1'
+
+    p = Paginator(user_comments, 10)
+    u_c = p.page(page)
+
+    start_page = (int(page) - 1) // 10 * 10 + 1
+    end_page = start_page + 9
+
+    if end_page > p.num_pages:
+        end_page = p.num_pages
+
+    return render(request, 'app/userpage.html', {
+        'u_c' : u_c,
+        'pagination' : range(start_page, end_page + 1),
+        'user': user,
+        'user_comments': user_comments,
+        'review_num': review_num,
+    })
+
+def login(request):
+    if request.method == 'GET':
+        return render(request, 'app/login.html', {})
+    else:
+        email = request.POST['email']
+        password = request.POST['password']
+
+        try:
+            member = User.objects.get(email=email)
+
+            if bcrypt.checkpw(password.encode('utf-8'), member.password.encode('utf-8')):
+                request.session['email'] = email
+                request.session['user_id'] = member.id
+                request.session['alias'] = member.alias
+                return redirect('/')
+                
+            else:
+                messages = "실패"
+                return render(request, 'app/login.html', {'messages' : messages})
+            
+        except:
+            messages = "실패"
+            return render(request, 'app/login.html', {'messages' : messages})
+
+@csrf_exempt
+def edit_comment(request):
+    if request.method == 'GET':
+        comment_id = request.GET['c_id']
+        product_comment = Product_Comment.objects.select_related('user').get(id=comment_id)
+
+        return JsonResponse({
+            'method': 'get',
+            'content': product_comment.content,
+            'nickname': product_comment.user.alias,
+            'score': product_comment.score,
+            'bold': product_comment.bold,
+            'sparkling': product_comment.sparkling,
+            'sweet': product_comment.sweet,
+            'tannic': product_comment.tannic,
+            'acidic': product_comment.acidic,
+        })
+
+    else:
+        if not request.session.get('email'):
+            return JsonResponse({
+                'result': 'Fail',
+                'messages': 'go back',
+            })
+        
+        else:
+            try:
+                comment_id = request.POST['comment_id']
+                comment = request.POST['content']
+                score = request.POST['score']
+                bold = request.POST['bold']
+                sparkling = request.POST['sparkling']
+                sweet = request.POST['sweet']
+                tannic = request.POST['tannic']
+                acidic = request.POST['acidic']
+
+                product_comment = Product_Comment.objects.get(id=comment_id)
+
+                # db에 저장
+                product_comment.content = comment
+                product_comment.score = score
+                product_comment.bold = bold
+                product_comment.sparkling = sparkling
+                product_comment.sweet = sweet
+                product_comment.tannic = tannic
+                product_comment.acidic = acidic
+                product_comment.time = date.today()
+                product_comment.save()
+            
+                result = "Success"
+                messages = "Board comment save succeeded."
+                
+                return JsonResponse({'result': result, 'messages': messages})
+
+            except Exception as e:
+                result = "Fail"
+                messages = "Board comment save failed."
+                return JsonResponse({
+                    'result': 'Fail',
+                    'messages': 'error',
+                })
+
+def logout(request):
+    request.session.clear()
+    return redirect('/')
+
+def comment_delete(request, pk):
+    comments = Product_Comment.objects.get(id=pk)
+    email = User.objects.get(id=comments.user_id)
+    comment = get_object_or_404(Product_Comment,id=pk)
+    comment.delete()
+    messages = '삭제성공'
+    return render(request, 'app/userpage.html', {'messages': messages, 'email': email.email})
+
+def product_comment_delete(request, pk):
+    comments = Product_Comment.objects.get(id=pk)
+    comment = get_object_or_404(Product_Comment,id=pk)
+    comment.delete()
+    messages = '삭제성공'
+    return render(request, 'app/product_single.html', {'messages': messages, 'p_id': comments.product_id})
+
+def profile_delete(request):
+    if request.method == 'GET':
+        return render(request, 'app/userdelete.html', {})
+    else:
+        user_id = request.session.get('user_id')
+        password = request.POST['password']
+        member = User.objects.get(id=user_id)
+        if bcrypt.checkpw(password.encode('utf-8'), member.password.encode('utf-8')):
+            member.delete()
+            logout(request)
+            messages = '회원탈퇴 성공'
+            return render(request, 'app/login.html', {'messages': messages})
+        else:
+            messages = '비밀번호 오류'
+            return render(request, 'app/userdelete.html', {'messages': messages})

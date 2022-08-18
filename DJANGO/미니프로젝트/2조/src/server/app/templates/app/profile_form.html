@@ -1,0 +1,141 @@
+{% extends "common/base.html" %}
+
+{% block content %}
+
+<!-- Fake page loading -->
+<div id="fakeLoader"></div>
+
+<div class="wrapper" id="pro_wr">
+
+	<!-- Section -->
+	<div class="container-fluid white section">
+		<div class="container">
+				<div class="row">
+					<div class="col-sm-8 col-sm-push-2">
+						<header class="centred">
+							<h1>Profile</h1>
+							<h2></h2>
+						</header>
+						<hr class="space-40" />
+						<!-- Form start -->
+						<form>
+							{% csrf_token %}
+							<div class="row">
+								<div class="col-sm-6">
+									<input type="text" placeholder="Nickname" name="nickname" value={{ nickname }}>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-sm-6">
+									<input id="pw1" type="password" name="password" placeholder="password">
+								</div>
+								<div class="col-sm-6">
+									<input id="pw2" type="password" name="password2" placeholder="password check">
+								</div>
+							</div>
+							<!-- Form end -->
+
+							<div class="row">
+								<div class="col-sm-12 btn-wrap">
+									<a href="/profile/" class="btn btn-default" id="save" method="post"><span>OK</span></a> 
+									<a href="/" class="btn btn-grey"><span>Cancel</span></a>
+									<a href="/profile/delete/#user_wrapper" onclick="alert('정말 탈퇴하시겠습니까?')"class="withdrawal" style="float:left" id="withdrawal">Withdrawal?</a> 
+								</div>
+							</div>
+						</form>
+					</div>
+				</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="popupModal" tabindex="-1" role="dialog" aria-labelledby="popupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="popupModalLabel">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+				<div id="modal-message">message</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+password_check = function(event){
+	pw1 = $('input#pw1').val()
+	pw2 = $('input#pw2').val()
+	
+	$.ajax({
+		url: "/api/password_valid/",
+		type: "POST",
+		dataType: "JSON",
+		data: {
+			'pw1' : pw1,
+			'pw2': pw2,
+		},
+		success: function(result){
+			if(result.result == 'ok'){
+				console.log('pass')
+				$('input#pw2').css({
+					'border-bottom-color': '#cbb27c',
+				})
+				$('input#pw1').css({
+					'border-bottom-color': '#cbb27c',
+				})
+			} else {
+				console.log('fail')
+				$('input#pw2').css({
+					'border-bottom-color': 'red',
+				})
+				$('input#pw1').css({
+					'border-bottom-color': 'red',
+				})
+			}
+		},
+		error: function(result){
+			console.log(result)
+		},
+	})
+}
+
+// 패스워드 일치 검증
+$('input#pw1').blur(password_check)
+$('input#pw2').blur(password_check)
+
+$('').blur(function(event){
+})
+
+$('').blur(function(event){
+})
+
+	$('#save').click(function() {
+		$.ajax({
+			url: '/profile/',
+			data: $('form').serialize(), // nickname=OOOO&password=XXXX
+			type: 'post',
+			success: function(res) {
+				console.log("susccess, modal show")
+				$('#popupModalLabel').text(res.result);
+				$('#modal-message').text(res.messages);
+				$('#popupModal').modal('show');//now its working
+				windows.location.href = '/';
+            },
+			error: function(res) {
+				// .....
+			} 
+		})
+
+		return false;
+	});
+</script>
+{% endblock %}

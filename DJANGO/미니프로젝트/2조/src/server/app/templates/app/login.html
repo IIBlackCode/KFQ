@@ -1,0 +1,64 @@
+{% extends "common/base.html" %}
+
+{% load static %}
+{% block content %}
+
+<style>
+html { scroll-behavior: smooth; }
+</style>
+
+<!-- Fake page loading -->
+<div id="fakeLoader"></div>
+
+<!-- Wrapper -->
+<div class="wrapper" id="login_wr">
+
+	<!-- Section -->
+	<div class="container-fluid dark section no-padding">
+		<div class="container">
+			<div class="row">
+					<ul class="horz-menu center-menu">
+						<li class="active"><span><a href="#login_wr">Login</a></span></li>
+						<li><span><a href="../register/#reg">Register</a></span></li>
+					</ul>
+			</div>
+		</div>
+	</div>
+
+	<!-- login Section -->
+	<div class="container-fluid white section">
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-8 col-sm-push-2">
+					<header class="centred">
+						<h1>Login</h1>
+					</header>
+					<hr class="space-40" />
+					<form method="POST">
+						{% csrf_token %}
+						<div class="login" width = "50">
+							<input type="text" placeholder="email" name="email" style="width: 100%" maxlength="40"><br>
+							<input type="password" placeholder="password" name="password" maxlength="15">
+							<button type="submit" class="btn btn-primary" style="float:right; margin-right:10px">Login</button>
+							<a href="/find_password/#label_email" class="lost-pass" style="float:left" onclick="window.open(this.href, '_blank', 'width=auto, height=auto, toolbars=yes'); return false;">Forget your password?</a><br>
+						</div>
+					</form>
+					<br><br><br><br>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% if messages == "실패"%}
+<script type="text/javascript">
+	alert("로그인에 실패하셨습니다.");
+</script>
+{% elif messages == "회원탈퇴 성공" %}
+<script type="text/javascript">
+	alert("회원탈퇴가 완료되었습니다.");
+</script>
+
+{% endif %}
+
+{% endblock %}

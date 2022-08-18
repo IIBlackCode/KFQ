@@ -1,0 +1,72 @@
+{% extends "common/base.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+html { scroll-behavior: smooth; }
+</style>
+
+<div id="fakeLoader"></div>
+	<div class="wrapper" id="label_email">
+		<div class="container-fluid white section">
+			<div class="container">
+				<div class="row">
+					<div class="col-sm-8 col-sm-push-2">
+						<div class="jumbotron">
+							<div class="container text-center">
+								<form id="find_password">
+									{% csrf_token %}
+									<div class="form-group">
+										<label for="email">Email (회원가입 시 입력한 메일을 입력해주세요.)</label>
+										<input type="text" id="email" class="form-control" name="email">
+									</div>
+									<div class="form-group">
+										<label for="comment"></label>
+										<textarea class="form-control" rows="5" name="comment" style="display: none;"></textarea>
+									</div>
+									<button type="button" id="send" method="post" class="btn btn-primary btn-block" data-temp-pw="" onclick="make_temp_password()">
+										발송
+									</button>
+									<hr>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<br>
+			<br>
+			<br>
+		</div>
+	</div>
+</div>
+
+<script>
+	const make_temp_password = () => {
+		console.log("make_temp_password")
+
+		$.ajax({
+			url: '/find_password/',
+			data: {
+				'email': $('#email').val(),
+			},
+			type: 'post',
+			success: function(res) {
+				if(res.result === 'no') {
+					alert(res.message);
+				}
+				else if(res.result === 'ok') {
+					alert(res.message);
+					window.location.href = '/login/'
+				}
+			},
+			error: function(res) {
+				// ....
+			}
+		})
+
+		return false;
+	}
+</script>
+
+{% endblock %}

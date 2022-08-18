@@ -1,0 +1,44 @@
+1. 파일 업로드
+   - [Files]
+     /home/[사용자명]
+
+2. 압축 해제
+   - [Bash console]
+     unzip [파일명] -d [디렉토리명]
+
+3. 가상환경 생성
+   - virtualenv --python=python3.7 django_venv
+
+4. 가상환경 적용
+   - source django_venv/bin/activate
+
+5. 필요 패키지 설치
+   - pip install flask
+
+6. 웹앱 생성
+   - [Add a new web app]
+     Manual configuration (including virtualenvs)
+     Python 3.7
+
+7. 소스코드 위치 지정
+   - [Web]
+     /home/[사용자명]/[디렉토리명]
+
+8. WSGI 설정
+   import sys
+   path = '/home/[사용자명]/[디렉토리명]'  # ex) /home/ggoreb/mysite
+   if path not in sys.path:
+     sys.path.append(path)
+
+   os.environ['DJANGO_SETTINGS_MODULE'] = '[디렉토리명].settings'  # ex) 'mysite.settings'
+
+   from django.core.wsgi import get_wsgi_application
+   from django.contrib.staticfiles.handlers import StaticFilesHandler
+   application = StaticFilesHandler(get_wsgi_application())
+
+9. 가상환경 디렉토리 지정
+   /home/[사용자명]/django_venv
+
+10. 새로고침
+   - [Web]
+     [Reload OOO.pythonanywhere.com]

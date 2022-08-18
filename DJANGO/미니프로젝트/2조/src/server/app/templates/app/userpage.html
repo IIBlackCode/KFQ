@@ -1,0 +1,422 @@
+{% extends "common/base.html" %}
+
+{% load static %}
+
+{% block content %}
+<style>
+	.board {
+		padding-left: 60px;
+		padding-right: 60px;
+		padding-top: 20px;
+		padding-bottom: 20px;
+	}
+
+	.date {
+		font-size: unset;
+		margin: 0;
+		color: #cbb27c;
+		font-family: 'GRAND HOTEL', cursive;
+		float: right;
+	}
+
+	.latest-post:before {
+		width: 100%;
+	}
+
+	.remote-button {
+		position: absolute;
+		right: 0;
+	}
+
+	ul.horz-menu li span.search:after, ul.horz-menu li span.search:before {
+		background-color:#1b1d1e;
+	}
+	ul.horz-menu li span.search2:after, ul.horz-menu li span.search:before {
+		background-color:#1b1d1e;
+	}
+
+	#search_keyword {
+		border:none; 
+		margin-bottom:0; 
+		background-color:#fff;
+		text-align: center;
+	}
+
+	#search-type {
+		border:none; 
+		margin-bottom:0; 
+		padding-left:50px;
+		width: 170px;
+	}
+
+	.empty-page {
+		width: auto;
+		height: 400px;
+		text-align: center;
+		line-height: 400px;
+	}
+
+		.starR1{
+		background: url('http://miuu227.godohosting.com/images/icon/ico_review.png') no-repeat -52px 0;
+		background-size: auto 100%;
+		width: 15px;
+		height: 30px;
+		float:left;
+		text-indent: -9999px;
+		cursor: pointer;
+	}
+	.starR2{
+		background: url('http://miuu227.godohosting.com/images/icon/ico_review.png') no-repeat right 0;
+		background-size: auto 100%;
+		width: 15px;
+		height: 30px;
+		float:left;
+		text-indent: -9999px;
+		cursor: pointer;
+	}
+	.starR1.on{background-position:0 0;}
+	.starR2.on{background-position:-15px 0;}
+</style>
+	
+<body class="single">
+
+	<!-- Fake page loading -->
+	<!-- <div id="fakeLoader"></div> -->
+
+	<!-- Wrapper -->
+	<div class="wrapper">
+		<!-- Section -->
+		<div class="container-fluid dark section no-padding">
+			<div class="container">
+				<div class="row">
+					<div class="col-sm-12">
+						<p class="author center-menu">{{ user.alias }} / <a href="#comments">{{ review_num }} reviews</a></p>
+						<ul class="horz-menu">
+							<li ><span class="search"><select name="search-type" id="search-type">
+								<option value="">All</option>
+								<option value="beer">Beer</option>
+								<option value="wine">Wine</option>
+								<option value="cocktail">Cocktail</option>
+							</select></span></li>
+							<li class="active"><span class="search2"><input type="text" id="search_keyword"></span></li>
+							<li><span><a href='javascript:void(0);' onclick="keyword_search()" class="btn-default">Search</a></span></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Section -->
+		<div class="container-fluid light section">
+			<div class="container">
+				<div class="row">
+					<div class="col-sm-12 single-blog">
+						{% comment %} <img src="http://placehold.it/750x535" alt="Craft beer single blog post" /> {% endcomment %}
+						<header>
+							<a style="color: rgb(197, 168, 4); font-family: 'Grand Hotel', cursive; font-size:x-large;">Name</a>
+							<h2>{{ user.alias }}</h2>
+							<a style="color: rgb(197, 168, 4); font-family: 'Grand Hotel', cursive; font-size:x-large;"> email</a>
+							<h3>{{ user.email }}</h3>
+						</header>	
+					</div>
+				</div>
+			</div>
+			<br><br><br><br>
+		</div>
+
+		<!-- Section -->
+		<div class="container-fluid section">
+			<div class="container">
+				<div class="row">
+					<div class="col-sm-12">
+						<h3 id="comments">Reviews</h3>
+					</div>
+					<br><br><br><br><br>
+					<div class="col-sm-12 user-comments">
+						{% for user_comment in u_c %}
+							<div class="row scrollme animateme" data-when="enter" data-from="0.75" data-to="0" data-opacity="0" data-translatey="75">
+							<div class="col-sm-1">
+								<img src="/static/images/beer/{{ user_comment.product.image }}" style = "max-width: 200%; max-height: 200%; position: relative; left: -30px;" alt="Booze on HTML template" />
+							</div>
+							<br><br>
+							<div class="col-sm-11">
+								<h5>{{ user_comment.product.name }}</h5>
+								<p>{{ user_comment.content }}</p>
+								{% if request.session.user_id == user_comment.user_id or request.session.user_id == 38%}
+								<span class="edit">
+									<a href="#" onClick="edit_button({{ user_comment.id }})">Edit</a> | <a href="/userpage/{{user_comment.id}}/delete">Delete</a>
+								</span>
+								{% endif %}
+							</div>
+						</div>
+
+						{% endfor %}
+
+					</div>
+				</div> 
+			</div>
+		</div>
+
+		<!-- Section: paging -->
+		<div class="container-fluid super-dark section no-padding">
+				<div class="container">
+					<div class="row">
+						<div class="col-sm-12">
+							<ul class="pagination" style=" display: block; text-align: center;">
+							<ul class="horz-menu center-menu pages" >
+							<!-- 이전페이지 -->
+								{% if u_c.has_previous %}
+									<li class="page-item">
+										<a class="page-link" href="?email={{ user.email }}&page={{ u_c.previous_page_number }}"><</a>
+									</li>
+									{% else %}
+									<li class="page-item disabled">
+										<a class="page-link" tabindex="-1" aria-disabled="true" href="#"><</a>
+									</li>
+								{% endif %}
+								<!-- 페이지리스트 -->
+								{% for i in pagination %}
+									{% if u_c.number == i %}
+										<li class="active"><span><a href="?email={{ user.email }}&page={{ i }}">{{ i }}</a></span></li>
+									{% else %}
+										<li><span><a href="?email={{ user.email }}&page={{ i }}">{{ i }}</a></span></li>
+									{% endif %}
+								{% endfor %}
+								<!-- 다음페이지 -->
+								{% if u_c.has_next %}
+									<li class="page-item">
+									<a class="page-link" href="?email={{ user.email }}&page={{ u_c.next_page_number }}">></a>
+									</li>
+								{% else %}
+									<li class="page-item disabled">
+									<a class="page-link" tabindex="-1" aria-disabled="true" href="#">></a>
+									</li>
+								{% endif %}
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+		<!-- Modal -->
+	<div class="modal fade" id="popupModal" tabindex="-1" role="dialog" aria-labelledby="popupModalLabel" aria-hidden="true">
+		<div class="modal-dialog modal-lg" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="popupModalLabel" data-comment-id="">Modal title</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div style="margin-left: 50px">
+					<div class="modal_starRev">
+						<span id="starR1" class="starR1 on"></span>
+						<span id="starR2" class="starR2"></span>
+						<span id="starR1" class="starR1"></span>
+						<span id="starR2" class="starR2"></span>
+						<span id="starR1" class="starR1"></span>
+						<span id="starR2" class="starR2"></span>
+						<span id="starR1" class="starR1"></span>
+						<span id="starR2" class="starR2"></span>
+						<span id="starR1" class="starR1"></span>
+						<span id="starR2" class="starR2"></span>
+					</div>
+
+					<hr style="border: 0px"></hr>
+					<hr style="border: 0px"></hr>
+					<hr style="border: 0px"></hr>
+
+					<div class="Container" >
+						<h4 style="display: inline-block">Bold: </h4>
+						<h4 id = "modal_slider_value_view_modal_bold" style="display: inline-block">0</h4>						  
+						<input id="modal_bold" style="width: 80%;" class="modal_slider_range" type="range" value="0" min="0" max="100"></input>						  
+					</div>
+					<div class="Container" >
+						<h4 style="display: inline-block">Sparkling: </h4>
+						<h4 id = "modal_slider_value_view_modal_sparkling" style="display: inline-block">0</h4>						  
+						<input id="modal_sparkling" style="width: 80%;" class="modal_slider_range" type="range" value="0" min="0" max="100"></input>						  
+					</div>
+					<div class="Container" >
+						<h4 style="display: inline-block">Sweet: </h4>
+						<h4 id = "modal_slider_value_view_modal_sweet" style="display: inline-block">0</h4>						  
+						<input id="modal_sweet" style="width: 80%;" class="slider_range" type="range" value="0" min="0" max="100"></input>						  
+					</div>
+					<div class="Container" >
+						<h4 style="display: inline-block">Tannic: </h4>
+						<h4 id = "modal_slider_value_view_modal_tannic" style="display: inline-block">0</h4>						  
+						<input id="modal_tannic" style="width: 80%;" class="modal_slider_range" type="range" value="0" min="0" max="100"></input>						  
+					</div>
+					<div class="Container" >
+						<h4 style="display: inline-block">Acidic: </h4>
+						<h4 id = "modal_slider_value_view_modal_acidic" style="display: inline-block">0</h4>						  
+						<input id="modal_acidic" style="width: 80%;" class="modal_slider_range" type="range" value="0" min="0" max="100"></input>						  
+					</div>
+					<div class="modal-body">
+						<textarea id="modal-message" rows="5"></textarea>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal" id="save_edit">OK</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+
+	keyword_search = () => {
+		console.log("search start")
+		const keyword = $('#search_keyword').val()
+		const category = $('#search-type').val()
+
+		console.log("keyword: ", keyword)
+
+		window.location.replace(`?email={{ user.email }}&category=${category}&keyword=${keyword.toLowerCase()}`);
+	}
+	{% if messages%}
+		window.location.replace(`/userpage/?email={{ email }}&keyword=`);	
+	{%endif%}
+
+	<!-- edit comment -->
+	function ModalShowSliderValue(val, id)
+	{
+		new_id = "modal_slider_value_view" + "_" + id;
+		var obValueView = document.getElementById(new_id);
+		obValueView.innerHTML = val
+	}
+
+	var ModalRangeSlider = function(){
+		var range = $('.modal_slider_range');
+		
+		range.on('input', function(){		
+			ModalShowSliderValue(this.value, this.id);
+		});
+	};
+
+	ModalRangeSlider();
+
+	$('.modal_starRev span').click(function(){
+		$(this).parent().children('span').removeClass('on');
+		$(this).addClass('on').prevAll('span').addClass('on');
+		return false;
+	});
+
+	let getCSRFTokenValue = () => $('input[name=csrfmiddlewaretoken]').val()
+
+	let edit_button = (comment_id) => {
+			
+		console.log('product_single edit_button', comment_id)
+
+		product_id = $('#comment-edit').attr('data-product-id')
+		content = $('#comment-edit').attr('data-comment')
+		console.log(content)
+
+		$.ajax({
+			//url: `/product_single/edit/?p_id=${product_id}&c_id=${comment_id}`,
+			url: '/product_single/edit_comment/',
+			data: { 
+				'p_id': product_id,
+				'c_id': comment_id,
+			},
+			type: 'get',
+			success: function(res) {
+					if(res.method === "get"){
+						// on 쓰여진 값 모두 지우고 시작
+						const spans = $('.modal_starRev > span')
+						for(let i = 1; i < 10; i++) {
+							console.log(spans[i])
+							$(spans[i]).removeClass('on');
+						}
+						
+						let score = res.score * 2;
+						for(let i = 0; i < score; i++) {
+							console.log(spans[i])
+							$(spans[i]).addClass('on');
+						}
+						console.log("get" + res.score)
+
+						//$(starR1).attr('starR1','class_name');
+
+						console.log("susccess, modal show")
+						$('#popupModalLabel').text(res.nickname);
+						$('#modal-message').text(res.content);
+						bold = Math.round(res.bold * 100);
+						$('#modal_slider_value_view_modal_bold').text(bold);
+						$('#modal_bold').val(bold);
+						sparkling = Math.round(res.sparkling * 100);
+						$('#modal_slider_value_view_modal_sparkling').text(sparkling);
+						$('#modal_sparkling').val(sparkling);
+						sweet = Math.round(res.sweet * 100);
+						$('#modal_slider_value_view_modal_sweet').text(sweet);
+						$('#modal_sweet').val(sweet);
+						tannic = Math.round(res.tannic * 100);
+						$('#modal_slider_value_view_modal_tannic').text(tannic);
+						$('#modal_tannic').val(tannic);
+						acidic = Math.round(res.acidic * 100);
+						$('#modal_slider_value_view_modal_acidic').text(acidic);
+						$('#modal_acidic').val(acidic);
+						
+						$('#popupModal').modal('show');
+						$('#popupModalLabel').attr('data-comment-id', comment_id)
+						//location.reload();
+				}
+			},
+			error: function(res) {
+				// .....
+			} 
+		})
+	}
+
+	$('#save_edit').click(function() {
+		comment_id = $('#popupModalLabel').attr('data-comment-id')
+		console.log("save_edit comment_id = ", comment_id)
+
+		// 0.5 ~ 5점 만점
+		score = 0.0
+		$('.on').each(() => score += 0.5)
+		//score -= 0.5
+		console.log(score)
+
+		content = $('#comment-area').val()
+
+		bold = $('#modal_slider_value_view_modal_bold').text() * 0.01
+		sparkling = $('#modal_slider_value_view_modal_sparkling').text() * 0.01
+		sweet = $('#modal_slider_value_view_modal_sweet').text() * 0.01
+		tannic = $('#modal_slider_value_view_modal_tannic').text() * 0.01
+		acidic = $('#modal_slider_value_view_modal_acidic').text() * 0.01
+		console.log(bold, sparkling, sweet, tannic, acidic)
+
+		$.ajax({
+			url: '/product_single/edit_comment/',
+			data: {
+				'comment_id': comment_id,
+				'content': $('#modal-message').val(),
+				'score': score,
+				'bold': bold,
+				'sparkling': sparkling,
+				'sweet': sweet,
+				'tannic': tannic,
+				'acidic': acidic,
+			}, 
+			type: 'POST',
+			dataType: 'json',
+			success: function(res) {
+				if(res.result === "Success"){
+					location.reload();
+				}else if(res.result === "Fail"){
+					window.location.href = '/'
+				}
+			},
+			error: function(res) {
+				// .....
+			} 
+		})
+
+		return false;
+	});
+
+	</script>
+</body>
+{% endblock %}
