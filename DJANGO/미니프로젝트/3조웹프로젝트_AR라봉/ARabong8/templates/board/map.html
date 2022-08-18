@@ -1,0 +1,172 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AR map to chat</title>
+  <!-- Favicon icon -->
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon.png" />
+  <link rel="stylesheet" href="/static/vendor/chartist/css/chartist.min.css" />
+  <link href="/static/vendor/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet" />
+  <link href="/static/vendor/owl-carousel/owl.carousel.css" rel="stylesheet" />
+  <link href="/static/css/style.css" rel="stylesheet" />
+  <style></style>
+</head>
+
+<body>
+  <!--*******************        Preloader start    ********************-->
+  <div id="preloader">
+    <div class="sk-three-bounce">
+      <div class="sk-child sk-bounce1"></div>
+      <div class="sk-child sk-bounce2"></div>
+      <div class="sk-child sk-bounce3"></div>
+    </div>
+  </div>
+  <!--*******************        Preloader end    ********************-->
+
+  <!--**********************************        Main wrapper start    ***********************************-->
+  <div id="main-wrapper">
+    <!--**********************************            Nav header start        ***********************************-->
+    {% include 'nav-header.html'%}
+
+    <!--**********************************            Nav header end        ***********************************-->
+
+    <!--**********************************            Chat box start        ***********************************-->
+
+    <!--**********************************            Chat box End        ***********************************-->
+
+    <!--**********************************            Header start        ***********************************-->
+    {% include 'navbar.html'%}
+
+    <!--**********************************            Header end ti-comment-alt        ***********************************-->
+
+    <!--**********************************            Sidebar start        ***********************************-->
+    {% include 'sidebar.html' %}
+
+    <!--**********************************            Sidebar end        ***********************************-->
+
+    <!--**********************************            Content body start        ***********************************-->
+    <div class="content-body">
+      <div class="container-fluid">
+        <div class="form-head mb-sm-5 mb-3 d-flex flex-wrap align-items-center">
+          <h2 class="font-w600 mb-2 mr-auto">
+            마커를 통해 AR채팅방에 입장해보세요
+          </h2>
+        </div>
+
+        <!--************************************** 지 도 d i v 입니다 ************************************************-->
+        <div id="map" style="width: 80%; height: 600px"></div>
+
+        <script type="text/javascript"
+          src="//dapi.kakao.com/v2/maps/sdk.js?appkey=da146a2a6ff6a54903c1d2a7caecd1c7"></script>
+        <script>
+          //***************** draw map
+          var mapContainer = document.getElementById("map"),
+            mapOption = {
+              center: new kakao.maps.LatLng(33.467427, 126.3293),
+              level: 4,
+            };
+          var map = new kakao.maps.Map(mapContainer, mapOption);
+          var chat_title = "default";
+
+          //***************** draw marker
+          addMarker(new kakao.maps.LatLng(33.467427, 126.3293)); // default marker 표시.
+
+          //***************** 지도클릭 - > 마커 추가
+          kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+            //console.log(lat)
+
+            chat_title = prompt("채팅방 제목을 입력하세요.");
+            if (chat_title == null) {
+              alert("다시 선택하세요");
+            } else {
+              addMarker(mouseEvent.latLng);
+              var latlng = mouseEvent.latLng; //ajax ->title
+              console.log(chat_title);
+              $.ajax({
+                url: "/board/map/",
+                type: "post",
+                data: { lat: latlng.Ma, lng: latlng.La, title: chat_title },
+                success: function (res) {
+                  console.log("request!!!");
+                },
+              });
+            }
+          });
+
+          function charToUnicode(str) {
+            if (!str) return false;
+            var unicode = '';
+            for (var i = 0, j = str.length; i < j; i++) {
+              unicode += '\\' + str[i].charCodeAt(0).toString(16);
+            };
+            return unicode;
+          }
+
+          // 추가된 마커 push, map에 draw
+          function addMarker(position) {
+            //var iwContent = '<input placeholder="채팅방제목입력" style="padding:5px;"> </input>', // 인포윈도우에 표출될 내용으로 HTML 문자열이나 document element가 가능합니다
+            //    iwRemoveable = true; // removeable 속성을 ture 로 설정하면 인포윈도우를 닫을 수 있는 x버튼이 표시됩니다
+
+            var infowindow = new kakao.maps.InfoWindow({
+              content: `<a target="_blank" href="../../chat/${charToUnicode(chat_title).replace(/\\/g, "")}">${chat_title}</a>`,
+              removable: true,
+            });
+
+            var marker = new kakao.maps.Marker({
+              position: position,
+              //clickable: true
+            });
+            marker.setMap(map); // 마커가 지도 위에 표시되도록 설정합니다
+            //console.log(marker)
+            kakao.maps.event.addListener(marker, "click", function () {
+              // 마커 위에 인포윈도우를 표시합니다
+              infowindow.open(map, marker);
+            });
+          }
+          //************************************ 인포윈도우 ************
+
+          // 지도 로딩 후 채팅방 데이터 목록 조회
+          kakao.maps.event.addListener(
+            map,
+            "tilesloaded",
+            function (mouseEvent) {
+              $.ajax({
+                url: "/board/map_data/",
+                success: function (res) {
+                  for (const item of res) {
+                    let position = new kakao.maps.LatLng(item.lat, item.lng);
+                    chat_title = item.title;
+                    addMarker(position);
+                  }
+                },
+              });
+            }
+          );
+        </script>
+      </div>
+    </div>
+    <!--**********************************            Content body end        ***********************************-->
+  </div>
+
+  <!--**********************************            Footer start        ***********************************-->
+  {% include 'footer.html'%}
+  <!--**********************************            Footer end        ***********************************-->
+
+  <!--**********************************        Scripts    ***********************************-->
+  <!-- Required vendors -->
+  <script src="/static/vendor/global/global.min.js"></script>
+  <script src="/static/vendor/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+  <script src="/static/vendor/chart.js/Chart.bundle.min.js"></script>
+
+  
+
+  <script src="/static/vendor/owl-carousel/owl.carousel.js"></script>
+  <script src="/static/js/custom.min.js"></script>
+  <script src="/static/js/deznav-init.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,690 @@
+{% extends 'defaultbook.html' %}
+
+{% block content %}
+{% load static %}
+
+<style>
+    .comment {
+        display: none;
+    } 
+    .invisible {
+        display: none;
+    }
+    .visible { display : visible;}
+    .updateanddelete{
+        display: none!important;
+    }
+    .updatepost { display : none;}
+
+     .replyfloat {
+        float: right!important;
+    }
+    
+    .replystyle {
+        flex-basis: 90%!important;
+    }
+    
+    .replydeletstyle {
+        flex-basis: 10%!important;
+        align-items: center;
+        align-content: center;
+    }
+    
+    .updatehiding {
+        display: none!important;
+    }
+    .seemore{
+        display: none
+    }
+</style>
+
+<script src='http://code.jquery.com/jquery-3.1.1.min.js'></script>
+<script>
+    let page = 1;
+    const getCardData = function (page) {
+        $.ajax({
+            url: '/mybookmarkmore/',
+            data: { 'page': page },
+            success: function (res) {
+                let html = '';
+                for (let item of res) {
+                    html += `
+<div class="card w-100 shadow-xss rounded-xxl border-0 p-4 mb-3">
+    <div class="card-body p-0 d-flex">
+        <figure class="avatar me-3">`;
+                    if (item.dept == '국방부') {
+                        html += `<img src="{% static 'images/dod3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+                    } else if (item.dept == '육군') {
+                        html += `<img src="{% static 'images/army3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else if (item.dept == '해군') {
+                        html += `<img src="{% static 'images/navy3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else {
+                        html += `<img src="{% static 'images/air3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    }
+           html += `
+            </figure>
+        <h4 class="fw-700 text-grey-900 font-xssss mt-1" style ="flex-basis : 100%">${item.user_name} &nbsp; ${item.boardname}
+        <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">소속 : ${item.dept} </span>
+        <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">작성일 : ${item.cre_date} </span></h4>
+        
+        
+        
+        
+        <label class='drmenu' >
+            <a href="javascript:void(0)" class="ms-auto" id="dropdownMenu2" data-bs-toggle="dropdown" aria-expanded="false"><i
+                    class="ti-more-alt text-grey-900 btn-round-md bg-greylight font-xss" name=${item.userid_id}></i></a>
+
+            <div class="dropdown-menu dropdown-menu-end p-4 rounded-xxl border-0 shadow-lg" aria-labelledby="dropdownMenu2">
+                <a href="javascript:void(0)" onclick = bookmark(this) name = ${item.boardcontentid} >
+                    <div class="card-body p-0 d-flex">
+                        <i class="feather-bookmark text-grey-500 me-3 font-lg"></i>
+                        <div>
+                        <h4 style="margin: 0px;" class="fw-600 text-grey-900 font-xssss mt-0 me-4">${item.isbookmark}</h4>
+                        <span class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500">마이페이지에서 조회 가능</span>
+                        </div>
+                    </div>
+                </a>`;
+
+                if (`{{ request.session.id }}` == item.userid || `{{request.session.auth}}` == '관리자' ){
+                    html += `
+                    <a href="javascript:void(0)">
+                    <div class="del card-body p-0 d-flex mt-2 updatepostclick ">
+                        
+                        <i class="feather-alert-circle text-grey-500 me-3 font-lg updatepostclick"></i> 
+                        <h4 class="fw-600 text-grey-900 font-xssss mt-0 me-4">게시글 수정하기 
+                        <span class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500">.</span></h4>
+                    </div>
+                    </a>
+                    <a href="javascript:void(0)">
+                    <div class="card-body p-0 d-flex mt-2 deletepost" name = ${item.boardcontentid} >
+               <i class="feather-alert-circle text-grey-500 me-3 font-lg"></i>
+                <h4 class="fw-600 text-grey-900 font-xssss mt-0 me-4">게시글 삭제하기 <span
+                        class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500"></span></h4>
+            </div></a>`
+            ;
+                }
+    if(item.content.length >= 50){
+                    html += `
+            </div>
+        </label>
+    </div>
+    <div class="card-body p-0 me-lg-5">
+        <p class="fw-500 text-grey-500 lh-26 font-xssss w-100 text-truncate delcontent" name='${item.boardcontentid}'> <span>${item.content}</span> </p>  
+        <a  href="javascript:void(0)" class="fw-600 font-xssss text-primary ms-2 unfold">See more</a>
+    </div>`;
+    }
+    else{
+                    html += `
+            </div>
+        </label>
+    </div>
+    <div class="card-body p-0 me-lg-5">
+        <p class="fw-500 text-grey-500 lh-26 font-xssss w-100 text-truncate delcontent" name='${item.boardcontentid}'> <span>${item.content}</span> </p> 
+        <a  href="javascript:void(0)" class="fw-600 font-xssss text-primary ms-2 unfold seemore">See more</a>
+    </div>`;
+    }
+    html +=`
+   <div class = 'updatepost' name = 'here'>
+        <div class="card w-100 shadow-xss rounded-xxl border-0 ps-4 pt-4 pe-4 pb-3 mb-3">
+            <form method="post" action='/updatepost/'>
+                {% csrf_token %}
+                <!-- 글쓰는 부분 -->
+                <div class="card-body p-0 mt-3 position-relative">
+                    <textarea name="updatecontent" class="updatecontent h100 bor-0 w-100 rounded-xxl p-2  font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg" cols="30" rows="10" placeholder="What's on your mind?"></textarea>
+                </div>
+                <!-- 버튼 -->
+                <div class="card-body d-flex p-0 mt-0">
+                    <label class=" font-xssss fw-600 ms-auto text-grey-900">
+                    <button name="${item.boardcontentid}" type = "submit" class="updatepostsend border-light btn-round-sm font-xs text-primary feather-edit-3 me-2 bg-greylight" ></button>Create Post
+                    </label>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    
+    <div class="card-body d-flex p-0 mt-3">
+        <a href="javascript:void(0)" onclick = likebutton(this) name = ${item.boardcontentid} class="emoji-bttn d-flex align-items-center fw-600 text-grey-900 text-dark lh-26 font-xssss me-2"><i
+                class="feather-thumbs-up text-white bg-primary-gradiant me-1 btn-round-xs font-xss"></i><span>${item.like_cnt}</span></a>
+
+        <a href="javascript:void(0)" class="d-flex align-items-center fw-600 text-grey-900 text-dark lh-26 font-xssss choco">
+        
+                <i
+                class="feather-message-circle text-dark text-grey-900 btn-round-sm font-lg commentclick"></i>
+                <span
+                class="d-none-xss commentclick commentclick2" name=${item.boardcontentid}>
+                 ${item.reply_cnt} comment(s) </span></a>
+     </div>
+    <div class="comment">
+            {% csrf_token %}
+        <div class="commentdiv">
+            <div class="card-body p-0 mt-3 position-relative">
+                
+                <textarea name="commentmessage" id="commentmessage" class="commentmessage h55 bor-0 w-100 rounded-xxl p-2 ps-3 font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg commenttextiinput" cols="30" rows="10" placeholder="Leave a comment"></textarea>         
+                <input type="text" name="boardcontentid"  readonly class='invisible'>
+
+            </div>
+
+            <div class="card-body d-flex p-0 mt-0">
+                <label class=" font-xssss fw-600 ms-auto text-grey-900">
+                <button name="${item.boardcontentid}" id = "complete" class="border-light commentsend btn-round-sm font-xs text-primary feather-edit-3 me-2 bg-greylight" >
+                </button>comment
+            </label>
+
+        </div>
+
+    </div>
+    <div class="replylist">
+        </div>             
+    </div>                   
+    </div>
+`;
+
+                }
+                $('#cardbody').append(html);
+            }
+        })
+    }
+
+    
+    $('body').on('click', '.unfold', function () {
+        $(this).prev().toggleClass('text-truncate')
+    });
+
+
+
+    $('body').on('click', '.commentclick', function () {
+        const $this = $(this).parent().parent().next().children('.replylist');
+        if ($(this).parent().parent().next().is('.comment')) {
+            $(this).parent().parent().next().removeClass('comment')
+            $.ajax({
+                url: '/replylisting/',
+                data: {
+                    'boardcontentid': $(this).attr('name')
+                },
+                success: function (res) {
+                    $this.children('.replydetail').remove();
+                    html = '';
+                    for (item in res.replylist) {
+
+                        html += `<div class="card-body p-0 d-flex replydetail">
+    <figure class="avatar me-3">
+    `;
+                    if (res.replylist[item]['dept'] == '국방부') {
+                        html += `<img src="{% static 'images/dod3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+                    } else if (res.replylist[item]['dept'] == '육군') {
+                        html += `<img src="{% static 'images/army3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else if (res.replylist[item]['dept'] == '해군') {
+                        html += `<img src="{% static 'images/navy3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else {
+                        html += `<img src="{% static 'images/air3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    }
+           html += `
+    </figure>
+    <h4 class="fw-700 text-grey-900 font-xssss mt-1 replystyle overflow-auto"> ${res.replylist[item]['user_name']} &nbsp ${res.replylist[item]['dept']} 
+
+    <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">${res.replylist[item]['reply']}</span>
+    <textarea name="commentmessage" id="commentmessage" class="commentmessage h55 bor-0 w-100 rounded-xxl p-2 ps-3 font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg commenttextiinput updatehiding" cols="30" rows="10">${res.replylist[item]['reply']}</textarea> 
+    <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">작성일 : ${res.replylist[item]['cre_date']} </span>
+    </h4>
+    
+    <div class="replydeletstyle">`;
+
+                        if ('{{request.session.id}}' == res.replylist[item]['user_id']) {
+
+
+                            html += `<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 replydelete" name=${res.replylist[item]['replyid']}>삭제</a>
+<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 replyupdate" name=${res.replylist[item]['replyid']}>수정</a>
+<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 updatesending updatehiding" name=${res.replylist[item]['replyid']}>제출</a>`
+                        }
+                        html += `</div>
+</div>`
+                    }
+
+
+                    $this.append(html)
+
+                }
+            })
+
+        } else {
+            $(this).parent().parent().next().addClass('comment')
+
+        }
+
+
+
+
+    });
+
+    $('body').on('click', '.commentsend', function () {
+
+        x = $(this).attr('name')
+        const $this2 = $(this).parent().parent().parent().next();
+        const $this = $(this);
+        message = $(this).parent().parent().prev().children('#commentmessage').val()
+        if(message.length == 0){
+            window.alert('댓글 내용을 입력하세요.')
+        }
+        else{
+        $.ajaxSetup({
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            }
+        })
+        $.ajax({
+            url: '/replyposting/',
+            data: {
+                'boardcontentid': x,
+                'message': message
+            },
+            type: 'POST',
+            success: function (res) {
+                $this2.children('.replydetail').remove()
+                html = '';
+                for (item in res.replylist) {
+
+                    html += `<div class="card-body p-0 d-flex replydetail">
+    <figure class="avatar me-3">
+    `;
+                    if (res.replylist[item]['dept'] == '국방부') {
+                        html += `<img src="{% static 'images/dod3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+                    } else if (res.replylist[item]['dept'] == '육군') {
+                        html += `<img src="{% static 'images/army3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else if (res.replylist[item]['dept'] == '해군') {
+                        html += `<img src="{% static 'images/navy3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else {
+                        html += `<img src="{% static 'images/air3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    }
+           html += `
+    </figure>
+    <h4 class="fw-700 text-grey-900 font-xssss mt-1 replystyle overflow-auto">  ${res.replylist[item]['user_name']} &nbsp ${res.replylist[item]['dept']}
+
+    <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">${res.replylist[item]['reply']}</span>
+    <textarea name="commentmessage" id="commentmessage" class="commentmessage h55 bor-0 w-100 rounded-xxl p-2 ps-3 font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg commenttextiinput updatehiding" cols="30" rows="10">${res.replylist[item]['reply']}</textarea> 
+    <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">작성일 : ${res.replylist[item]['cre_date']} </span>
+    </h4>
+    
+    <div class="replydeletstyle">`;
+
+                        if ('{{request.session.id}}' == res.replylist[item]['user_id']) {
+
+
+                            html += `<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 replydelete" name=${res.replylist[item]['replyid']}>삭제</a>
+<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 replyupdate" name=${res.replylist[item]['replyid']}>수정</a>
+<a href="javascript:void(0)" class="d-block font-xssss fw-500 mt-l lh-3 text-grey-500 updatesending updatehiding" name=${res.replylist[item]['replyid']}>제출</a>`
+                        }
+                        html += `</div>
+</div>`
+                }
+
+                $this.parent().parent().parent().parent().prev().children('.choco').children('.commentclick2').text(res.cntt);
+                $this2.append(html)
+
+
+
+
+
+            }
+
+
+
+        })}
+
+
+
+
+
+    });
+
+
+    function likebutton(res) {
+        const id = $(res).attr('name');
+        $.ajax({
+            url: '/like/',
+            data: { 'id': id },  // /like/?id=44
+            success: function (res) {
+                $(`a[name=${id}] > span`).text(res.count);
+            }
+        }
+
+        )
+
+    }
+
+    function bookmark(res){
+        
+        const boardcontentid = $(res).attr('name');
+        console.log(boardcontentid)
+        $.ajax({
+            url: '/bookmark/',
+            data: { 'boardcontentid' : boardcontentid },
+            success: function (res) {
+                $(`a[name=${boardcontentid}] > div > div > h4 `).text(res.text);
+            }
+        }
+
+        )
+    }
+    $('body').on('click', '.updatepostclick', function () {
+    if ($(this).parent().parent().parent().parent().next().next().is('.updatepost')){
+        console.log('updatepost true')
+        $(this).parent().parent().parent().parent().next().next().removeClass('updatepost')
+
+    }
+    else { 
+        console.log('updatepost false')
+        $(this).parent().parent().parent().parent().next().next().addClass('updatepost')
+    }    
+
+    });
+
+
+
+$('body').on('click', '.updatepostsend', function () {
+
+    const boardcontentid = $(this).attr('name')
+    const content = $(this).parent().parent().prev().children('.updatecontent').val()
+    console.log(content)
+    $.ajaxSetup({
+        data: { csrfmiddlewaretoken: '{{ csrf_token }}' }
+    })
+    $.ajax({
+        url: '/updatepost/',
+        data: {
+            'boardcontentid': boardcontentid,
+            'content': content
+        },
+        type: 'POST',
+        success: function(res) { 
+            window.alert('수정이 완료되었습니다.');
+            $(`div[name='here']`).addClass('updatepost')
+            $(`p[name=${boardcontentid}] > span`).text(res.content)
+            if (content.length >= 50){
+                console.log($(`p[name=${boardcontentid}]`).next().removeClass('seemore'))
+            }
+            else {
+                console.log($(`p[name=${boardcontentid}]`).next().addClass('seemore'))
+            }
+        }
+    })
+    return false;
+});
+
+$('body').on('click', '.updatesending', function() {
+        const $this=$(this)
+        x = $(this).parent().prev().children('textarea').val()
+        y = $(this).attr('name')
+        a = $(this).next()
+        b = $(this).parent().prev().children('textarea')
+        c = $(this).parent().prev().children('textarea').prev()
+        updatething = $(this).parent().parent()
+        replylist = $(this).parent().parent().prev()
+        $.ajax({
+            url: '/updatereply/',
+            data: {
+                'reply': x,
+                'replyid': y
+            },
+            success: function(res) {
+                window.alert('댓글 수정이 완료되었습니다.')
+                c.text(x)
+                b.toggleClass('updatehiding')
+                c.toggleClass('updatehiding')
+                $this.toggleClass('updatehiding')
+            }
+        })
+    });
+$('body').on('click', '.replydelete', function() {
+        const $this = $(this).parent().parent().parent().parent().prev().children('.choco').children('.commentclick2')
+        ob = $(this).parent().parent()
+        x = $(this).attr('name')
+        console.log($this)
+        if(confirm("정말 삭제하시겠습니까?")==true){
+        $.ajax({
+            url: '/deletereply/',
+            data: {
+                'replyid': x
+            },
+            success: function(res) {
+                if (res['result'] == true) {
+                    window.alert('댓글이 삭제되었습니다.')
+                    ob.remove()
+                    $this.text(res.cntt)
+                    console.log($this)
+
+                } else {
+                    window.alert('자기 댓글만 삭제할 수있습니다.')
+                }
+            }
+        })
+        }
+    })
+
+
+$('body').on('click', '.replyupdate', function() {
+
+
+        a = $(this).next()
+        b = $(this).parent().prev().children('textarea')
+        c = $(this).parent().prev().children('textarea').prev()
+        x = $(this).attr('name')
+        $.ajax({
+            url: '/checkid/',
+            data: {
+                'replyid': x
+            },
+            success: function(res) {
+                if (res['data'] == true) {
+                    a.toggleClass('updatehiding')
+                    b.toggleClass('updatehiding')
+                    c.toggleClass('updatehiding')
+                } else {
+                    alert('자기 글만 수정할 수 있습니다.')
+                }
+            }
+        })
+    });
+
+
+$('body').on('click', '.deletepost', function() {
+        
+        x = $(this).attr('name')
+        l =$(this).parent().parent().parent().parent().parent()
+        if (confirm('정말 삭제하시겠습니까?') == true) {
+            $.ajax({
+                url: '/deleteposting/',
+                data: {
+                    'boardcontentid': x
+                },
+                success: function(res) {
+                    window.alert('삭제가 완료되었습니다.')
+                    l.remove()
+
+                }
+            })
+        }
+    })
+
+
+    const getCardSearchData = function (search) {
+        $.ajax({
+            url: '/loadsearchbookmark/',
+            data: { 'search': search },
+            success: function (res) {
+                let html = '';
+                for (let item of res) {
+
+                    html += `
+<div class="card w-100 shadow-xss rounded-xxl border-0 p-4 mb-3">
+    <div class="card-body p-0 d-flex">
+        <figure class="avatar me-3">`;
+                    if (item.dept == '국방부') {
+                        html += `<img src="{% static 'images/dod3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+                    } else if (item.dept == '육군') {
+                        html += `<img src="{% static 'images/army3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else if (item.dept == '해군') {
+                        html += `<img src="{% static 'images/navy3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    } else {
+                        html += `<img src="{% static 'images/air3.png' %}" alt="image" class="shadow-sm rounded-3 w-100">`;
+
+                    }
+           html += `
+            </figure>
+        <h4 class="fw-700 text-grey-900 font-xssss mt-1" style ="flex-basis : 100%">${item.user_name} &nbsp; ${item.boardname}
+        <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">소속 : ${item.dept} </span>
+        <span class="d-block font-xssss fw-500 mt-1 lh-3 text-grey-500">작성일 : ${item.cre_date} </span></h4>
+        
+        
+        
+        
+        <label class='drmenu' >
+            <a href="javascript:void(0)" class="ms-auto" id="dropdownMenu2" data-bs-toggle="dropdown" aria-expanded="false"><i
+                    class="ti-more-alt text-grey-900 btn-round-md bg-greylight font-xss" name=${item.userid_id}></i></a>
+
+            <div class="dropdown-menu dropdown-menu-end p-4 rounded-xxl border-0 shadow-lg" aria-labelledby="dropdownMenu2">
+                <a href="javascript:void(0)" onclick = bookmark(this) name = ${item.boardcontentid} >
+                    <div class="card-body p-0 d-flex">
+                        <i class="feather-bookmark text-grey-500 me-3 font-lg"></i>
+                        <div>
+                        <h4 style="margin: 0px;" class="fw-600 text-grey-900 font-xssss mt-0 me-4">${item.isbookmark}</h4>
+                        <span class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500">마이페이지에서 조회 가능</span>
+                        </div>
+                    </div>
+                </a>`;
+
+                if (`{{ request.session.id }}` == item.userid || `{{request.session.auth}}` == '관리자' ){
+                    html += `
+                    <a href="javascript:void(0)">
+                    <div class="del card-body p-0 d-flex mt-2 updatepostclick ">
+                        
+                        <i class="feather-alert-circle text-grey-500 me-3 font-lg updatepostclick"></i> 
+                        <h4 class="fw-600 text-grey-900 font-xssss mt-0 me-4">게시글 수정하기 
+                        <span class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500">.</span></h4>
+                    </div>
+                    </a>
+                    <a href="javascript:void(0)">
+                    <div class="card-body p-0 d-flex mt-2 deletepost" name = ${item.boardcontentid} >
+               <i class="feather-alert-circle text-grey-500 me-3 font-lg"></i>
+                <h4 class="fw-600 text-grey-900 font-xssss mt-0 me-4">게시글 삭제하기 <span
+                        class="d-block font-xsssss fw-500 mt-1 lh-3 text-grey-500"></span></h4>
+            </div></a>`
+            ;
+                }
+    if(item.content.length >= 50){
+                    html += `
+            </div>
+        </label>
+    </div>
+    <div class="card-body p-0 me-lg-5">
+        <p class="fw-500 text-grey-500 lh-26 font-xssss w-100 text-truncate delcontent" name='${item.boardcontentid}'> <span>${item.content}</span> </p> 
+        <a  href="javascript:void(0)" class="fw-600 font-xssss text-primary ms-2 unfold">See more</a>
+    </div>`;
+    }
+    else{
+                    html += `
+            </div>
+        </label>
+    </div>
+    <div class="card-body p-0 me-lg-5">
+        <p class="fw-500 text-grey-500 lh-26 font-xssss w-100 text-truncate delcontent" name='${item.boardcontentid}'> <span>${item.content}</span> </p> 
+        <a  href="javascript:void(0)" class="fw-600 font-xssss text-primary ms-2 unfold seemore">See more</a>
+    </div>`;
+    }
+    html +=`
+   <div class = 'updatepost' name = 'here'>
+        <div class="card w-100 shadow-xss rounded-xxl border-0 ps-4 pt-4 pe-4 pb-3 mb-3">
+            <form method="post" action='/updatepost/'>
+                {% csrf_token %}
+                <!-- 글쓰는 부분 -->
+                <div class="card-body p-0 mt-3 position-relative">
+                    <textarea name="updatecontent" class="updatecontent h100 bor-0 w-100 rounded-xxl p-2  font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg" cols="30" rows="10" placeholder="What's on your mind?"></textarea>
+                </div>
+                <!-- 버튼 -->
+                <div class="card-body d-flex p-0 mt-0">
+                    <label class=" font-xssss fw-600 ms-auto text-grey-900">
+                    <button name="${item.boardcontentid}" type = "submit" class="updatepostsend border-light btn-round-sm font-xs text-primary feather-edit-3 me-2 bg-greylight" ></button>Create Post
+                    </label>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    
+    <div class="card-body d-flex p-0 mt-3">
+        <a href="javascript:void(0)" onclick = likebutton(this) name = ${item.boardcontentid} class="emoji-bttn d-flex align-items-center fw-600 text-grey-900 text-dark lh-26 font-xssss me-2"><i
+                class="feather-thumbs-up text-white bg-primary-gradiant me-1 btn-round-xs font-xss"></i><span>${item.like_cnt}</span></a>
+
+        <a href="javascript:void(0)" class="d-flex align-items-center fw-600 text-grey-900 text-dark lh-26 font-xssss choco">
+        
+                <i
+                class="feather-message-circle text-dark text-grey-900 btn-round-sm font-lg commentclick"></i>
+                <span
+                class="d-none-xss commentclick commentclick2" name=${item.boardcontentid}>
+                 ${item.reply_cnt} comment(s) </span></a>
+     </div>
+    <div class="comment">
+            {% csrf_token %}
+        <div class="commentdiv">
+            <div class="card-body p-0 mt-3 position-relative">
+                
+                <textarea name="commentmessage" id="commentmessage" class="commentmessage h55 bor-0 w-100 rounded-xxl p-2 ps-3 font-xssss text-grey-500 fw-500 border-light-md theme-dark-bg commenttextiinput" cols="30" rows="10" placeholder="Leave a comment"></textarea>         
+                <input type="text" name="boardcontentid"  readonly class='invisible'>
+
+            </div>
+
+            <div class="card-body d-flex p-0 mt-0">
+                <label class=" font-xssss fw-600 ms-auto text-grey-900">
+                <button name="${item.boardcontentid}" id = "complete" class="border-light commentsend btn-round-sm font-xs text-primary feather-edit-3 me-2 bg-greylight" >
+                </button>comment
+            </label>
+
+        </div>
+
+    </div>
+    <div class="replylist">
+        </div>             
+    </div>                   
+    </div>
+`;
+                }
+                $('#cardbody').append(html);
+            }
+
+        })
+    }
+
+
+    $(function () {
+        let search = location.search; // ?search=OOOO
+        search = search.substring(8);
+        if (search.length > 0) {
+            getCardSearchData(search);
+
+        } else {
+            getCardData(page);
+
+            window.onscroll = function () {
+                if (document.documentElement.scrollTop >= document.body.scrollHeight - window.innerHeight) {
+                    page++;
+                    getCardData(page);
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

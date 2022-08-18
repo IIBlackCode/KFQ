@@ -1,0 +1,55 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>HTML 연습</title>
+</head>
+
+<body>
+	<table>
+		<tr>
+			<td>순번</td>
+			<td>과목</td>
+			<td>종류</td>
+			<td>난이도</td>
+		</tr>
+		<tr>
+			<td>1</td>
+			<td>Java</td>
+			<td>Language</td>
+			<td>상</td>
+		</tr>
+		<tr>
+			<td>2</td>
+			<td>JSP</td>
+			<td>Language</td>
+			<td>상</td>
+		</tr>
+		<tr>
+			<td>3</td>
+			<td>Oracle</td>
+			<td>Database</td>
+			<td>중</td>
+		</tr>
+		<tr>
+			<td>4</td>
+			<td>MySQL</td>
+			<td>Database</td>
+			<td>중</td>
+		</tr>
+		<tr>
+			<td>5</td>
+			<td>HTML</td>
+			<td>Language</td>
+			<td>하</td>
+		</tr>
+		<tr>
+			<td>6</td>
+			<td>JavaScript</td>
+			<td>Language</td>
+			<td>중</td>
+		</tr>
+	</table>
+</body>
+
+</html>
